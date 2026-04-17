@@ -1,0 +1,11 @@
+const express = require('express');
+const router = express.Router();
+const { getOverview, getMoistureTrend, getActivity, getWaterUsage, getHeatmap } = require('../controllers/analyticsController');
+const { protect } = require('../middleware/Auth');
+router.use(protect);
+router.get('/overview', getOverview);
+router.get('/moisture-trend', getMoistureTrend);
+router.get('/irrigation-activity', getActivity);
+router.get('/water-usage', getWaterUsage);
+router.get('/heatmap', getHeatmap);
+module.exports = router;

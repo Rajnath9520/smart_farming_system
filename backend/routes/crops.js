@@ -1,0 +1,12 @@
+const express = require('express');
+const router = express.Router();
+const { getSchedules, getActive, createSchedule, updateSchedule, deleteSchedule, getDefaultStages } = require('../controllers/cropController');
+const { protect } = require('../middleware/Auth');
+router.use(protect);
+router.get('/schedules', getSchedules);
+router.get('/active', getActive);
+router.post('/schedules', createSchedule);
+router.put('/schedules/:id', updateSchedule);
+router.delete('/schedules/:id', deleteSchedule);
+router.get('/defaults/:cropType', getDefaultStages);
+module.exports = router;

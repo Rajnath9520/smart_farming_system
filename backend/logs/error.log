@@ -1,0 +1,156 @@
+2026-03-15 01:35:16 [error]: Cast to ObjectId failed for value "1" (type string) at path "_id" for model "Notification" - /api/notifications/read - PATCH - ::1
+2026-03-15 01:35:18 [error]: Cast to ObjectId failed for value "2" (type string) at path "_id" for model "Notification" - /api/notifications/read - PATCH - ::1
+2026-03-15 01:35:19 [error]: Cast to ObjectId failed for value "3" (type string) at path "_id" for model "Notification" - /api/notifications/read - PATCH - ::1
+2026-03-15 01:35:19 [error]: Cast to ObjectId failed for value "6" (type string) at path "_id" for model "Notification" - /api/notifications/read - PATCH - ::1
+2026-03-15 01:35:20 [error]: Cast to ObjectId failed for value "9" (type string) at path "_id" for model "Notification" - /api/notifications/read - PATCH - ::1
+2026-03-15 17:43:53 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:43:56 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:43:59 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:45:54 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:45:54 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:46:49 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:46:58 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:47:19 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:47:22 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:47:36 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:47:36 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:47:36 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:47:50 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:47:53 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:48:04 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:48:04 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:48:12 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:48:15 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:48:36 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:48:37 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=90d - GET - ::1
+2026-03-15 17:48:54 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 17:49:50 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 20:15:04 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 20:15:04 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 20:15:18 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 20:16:13 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 20:16:13 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 21:12:10 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 21:12:10 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 21:12:38 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 21:18:37 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 21:18:38 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=90d - GET - ::1
+2026-03-15 21:18:48 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-15 21:18:50 [error]: Invalid format character '%W' in format string - /api/analytics/moisture-trend?period=90d - GET - ::1
+2026-03-16 15:07:34 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:07:34 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:07:34 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:13:02 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:13:02 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:13:02 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:44:17 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:44:17 [error]: BigQuery insert failed [irrigation_events]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:44:20 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:44:20 [error]: BigQuery insert failed [irrigation_events]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:45:34 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:45:34 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:45:34 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/water-usage?period=30d - GET - ::1
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/irrigation-activity?period=30d - GET - ::1
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/water-usage?period=30d - GET - ::1
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-16 15:50:45 [error]: bq is not a function - /api/analytics/irrigation-activity?period=30d - GET - ::1
+2026-03-16 15:51:41 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:51:41 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-16 15:51:41 [error]: BigQuery insert failed [sensor_readings]: Access Denied: BigQuery BigQuery: Streaming insert is not allowed in the free tier
+2026-03-17 19:57:24 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-03-17 19:57:24 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-03-17 19:57:24 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-17 19:57:24 [error]:  - /api/analytics/irrigation-activity?period=30d - GET - ::1
+2026-03-17 19:57:24 [error]:  - /api/analytics/water-usage?period=30d - GET - ::1
+2026-03-17 19:57:24 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-17 19:57:24 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-03-17 19:57:24 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-03-17 19:57:24 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-17 19:57:24 [error]:  - /api/analytics/irrigation-activity?period=30d - GET - ::1
+2026-03-17 19:57:24 [error]:  - /api/analytics/water-usage?period=30d - GET - ::1
+2026-03-17 19:57:24 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/water-usage?period=30d - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/irrigation-activity?period=30d - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/water-usage?period=30d - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-17 19:57:30 [error]:  - /api/analytics/irrigation-activity?period=30d - GET - ::1
+2026-03-17 19:57:38 [error]:  - /api/analytics/overview?period=7d&offset=1 - GET - ::1
+2026-03-17 19:57:38 [error]:  - /api/analytics/overview?period=7d&offset=0 - GET - ::1
+2026-03-17 19:57:38 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-17 19:57:38 [error]:  - /api/analytics/water-usage?period=7d - GET - ::1
+2026-03-17 19:57:38 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-17 19:57:38 [error]:  - /api/analytics/irrigation-activity?period=7d - GET - ::1
+2026-03-17 19:57:39 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-03-17 19:57:39 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-03-17 19:57:39 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-17 19:57:39 [error]:  - /api/analytics/water-usage?period=30d - GET - ::1
+2026-03-17 19:57:39 [error]:  - /api/analytics/irrigation-activity?period=30d - GET - ::1
+2026-03-17 19:57:39 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-17 19:57:42 [error]:  - /api/analytics/overview?period=7d&offset=0 - GET - ::1
+2026-03-17 19:57:42 [error]:  - /api/analytics/overview?period=7d&offset=1 - GET - ::1
+2026-03-17 19:57:42 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-17 19:57:42 [error]:  - /api/analytics/water-usage?period=7d - GET - ::1
+2026-03-17 19:57:42 [error]:  - /api/analytics/irrigation-activity?period=7d - GET - ::1
+2026-03-17 19:57:42 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-17 19:57:43 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-03-17 19:57:43 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-03-17 19:57:43 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-17 19:57:43 [error]:  - /api/analytics/water-usage?period=30d - GET - ::1
+2026-03-17 19:57:43 [error]:  - /api/analytics/irrigation-activity?period=30d - GET - ::1
+2026-03-17 19:57:43 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/water-usage?period=30d - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/irrigation-activity?period=30d - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/water-usage?period=30d - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/irrigation-activity?period=30d - GET - ::1
+2026-03-17 19:58:00 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-03-17 20:19:48 [error]: Get motor status error: db.ref is not a function
+2026-03-17 20:19:48 [error]: Get motor status error: db.ref is not a function
+2026-03-18 13:53:05 [error]: Get motor status error: db.ref is not a function
+2026-03-18 13:53:05 [error]: Get motor status error: db.ref is not a function
+2026-04-11 13:37:13 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-04-11 13:37:13 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-04-11 13:37:13 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-04-11 13:37:13 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-04-11 13:37:13 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-04-11 13:37:13 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-04-11 13:37:13 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-04-11 13:37:13 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-04-11 13:37:25 [error]:  - /api/analytics/moisture-trend?period=7d - GET - ::1
+2026-04-11 13:37:25 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-04-11 13:37:25 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-04-11 13:37:25 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-04-11 13:37:27 [error]:  - /api/analytics/moisture-trend?period=90d - GET - ::1
+2026-04-11 13:37:27 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-04-11 13:37:27 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-04-11 13:37:27 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-04-11 13:37:29 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-04-11 13:37:29 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-04-11 13:37:29 [error]:  - /api/analytics/moisture-trend?period=30d - GET - ::1
+2026-04-11 13:37:29 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-04-11 13:37:30 [error]:  - /api/analytics/overview?period=30d&offset=0 - GET - ::1
+2026-04-11 13:37:30 [error]:  - /api/analytics/overview?period=30d&offset=1 - GET - ::1
+2026-04-11 13:37:30 [error]:  - /api/analytics/moisture-trend?period=7d - GET - ::1
+2026-04-11 13:37:30 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
+2026-04-17 10:22:30 [error]: MongoDB Connection Error: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017

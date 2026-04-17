@@ -1,0 +1,10 @@
+const express = require('express');
+const router = express.Router();
+const { getCurrent, getForecast, refresh, getHistory } = require('../controllers/weatherController');
+const { protect } = require('../middleware/Auth');
+router.use(protect);
+router.get('/current', getCurrent);
+router.get('/forecast', getForecast);
+router.post('/refresh', refresh);
+router.get('/history', getHistory);
+module.exports = router;

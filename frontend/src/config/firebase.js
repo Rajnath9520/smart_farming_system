@@ -17,16 +17,7 @@ const cfg = {
   measurementID:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,              
 };
 
-// const cfg = {
-//   apiKey: "AIzaSyDcA5CgSSG8QQ0if4DxOkzhYxUB3Vg75F8",
-//   authDomain: "meromesh-14ae5.firebaseapp.com",
-//   databaseURL: "https://meromesh-14ae5-default-rtdb.asia-southeast1.firebasedatabase.app",
-//   projectId: "meromesh-14ae5",
-//   storageBucket: "meromesh-14ae5.firebasestorage.app",
-//   messagingSenderId: "486204448348",
-//   appId: "1:486204448348:web:846641d6cfa23befad9099",
-//   measurementId: "G-RPBY6C6NHR"
-// };
+
 
 const app = initializeApp(cfg);
 export const auth = getAuth(app);

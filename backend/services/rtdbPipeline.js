@@ -49,7 +49,7 @@ let lastTimestamp = null;
 
 
 function attachFarmListener() {
-  const path = `smartirrrigation`;
+  const path = `smartirrrigation/FARMID1`;
 
   db().ref(path).on(
     'value',

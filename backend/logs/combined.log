@@ -9370,3 +9370,17 @@
 2026-04-19 00:04:20 [info]: 🔄 Pump state: null → OFF → InfluxDB
 2026-04-19 00:07:07 [info]: Digital twin built for user 69e202bec9e0c7100ebed116, farm 69e202bec9e0c7100ebed117 — risk: insufficient_data
 2026-04-19 00:07:07 [info]: Digital twin built for user 69e202bec9e0c7100ebed116, farm 69e202bec9e0c7100ebed117 — risk: insufficient_data
+2026-04-19 06:07:49 [info]: Firebase Admin initialized
+2026-04-19 06:07:49 [info]: InfluxDB → http://localhost:8086  org=agrosense  bucket=sensor_data
+2026-04-19 06:07:49 [info]: Smart Irrigation Server running on port 5000 in undefined mode
+2026-04-19 06:07:49 [info]: All cron jobs started
+2026-04-19 06:07:49 [info]:   • Weather fetch        : 6AM & 6PM daily
+2026-04-19 06:07:49 [info]:   • Sensor sync          : every 5 minutes
+2026-04-19 06:07:49 [info]:   • Irrigation check     : every 15 minutes (10-min SMS warning before start)
+2026-04-19 06:07:49 [info]:   • Irrigation failsafe  : every hour
+2026-04-19 06:07:49 [info]: ✅ RTDB pipeline: listening → smartirrrigation/FARMID1
+2026-04-19 06:07:49 [info]: ✅ RTDB pipeline: started for single farm
+2026-04-19 06:07:49 [info]: ✅ RTDB → InfluxDB pipeline started (single farm mode)
+2026-04-19 06:07:49 [info]: MongoDB Connected: localhost
+2026-04-19 06:07:50 [info]: 🔄 Pump state: null → OFF → InfluxDB
+2026-04-19 06:08:06 [info]: InfluxDB write buffer flushed and closed

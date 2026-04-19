@@ -8,12 +8,9 @@ import { Empty } from "../ui/Empty";
 import {  Edit2,  Wheat } from "lucide-react";
 
  
-const CROP_ICONS = { Wheat: "🌾", Rice: "🌾", Corn: "🌽", Cotton: "🌿", Custom: "🌱" };
+const CROP_ICONS = { Wheat: "🌾",  Custom: "🌱" };
 const CROP_COLORS = {
   Wheat: "from-amber-50 to-yellow-50 border-amber-200 text-amber-700",
-  Rice:  "from-teal-50 to-cyan-50 border-teal-200 text-teal-700",
-  Corn:  "from-yellow-50 to-orange-50 border-yellow-200 text-yellow-700",
-  Cotton:"from-blue-50 to-indigo-50 border-blue-200 text-blue-700",
   Custom:"from-primary-50 to-teal-50 border-primary-200 text-primary-700",
 };
 const LEVEL_BADGE = { None:"neutral", Light:"info", Moderate:"warning", Medium:"warning", High:"danger" };

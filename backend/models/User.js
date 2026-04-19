@@ -20,7 +20,18 @@ const farmSchema = new mongoose.Schema({
     default: 'Loamy',
   },
   activeCrop: { type: mongoose.Schema.Types.ObjectId, ref: 'CropSchedule' },
-  fieldBoundary: { type: [[Number]], default: [] },
+
+  boundary: {
+  type: {
+    type: String,
+    enum: ['Polygon'],
+    default: 'Polygon'
+  },
+  coordinates: {
+    type: [[[Number]]], // GeoJSON polygon
+    default: []
+  }
+},
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -67,6 +78,7 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ 'farms.location': '2dsphere' });
+userSchema.index({ 'farms.boundary': '2dsphere' });
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();

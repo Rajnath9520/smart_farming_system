@@ -28,47 +28,58 @@ function periodToFluxStart(period) {
 
 
 const getLatest = asyncHandler(async (req, res) => {
-  const farm   = req.user.getActiveFarm();
-  const farmId = farm?._id?.toString() || '0';
-
   try {
-    const snapshot     = await db().ref(`irrigation_control/${farmId}`).get();
+    // Read multi-node structure from single Firebase root
+    const snapshot     = await db().ref(`smartirrrigation`).get();
     const firebaseData = snapshot.val();
 
     if (firebaseData) {
-      const moistureValue = parseFloat(firebaseData.SensorReading) || 0;
+      // Extract all nodes (node1, node2, etc.)
+      const nodes = Object.keys(firebaseData)
+        .filter(k => k.startsWith('node'))
+        .map(k => ({
+          node_id:         firebaseData[k].node_id || k,
+          sensor_moisture: parseFloat(firebaseData[k].sensor_moisture) || 0,
+          valve_id:        firebaseData[k].valve_id,
+          valve_switch:    firebaseData[k].valve_switch1 || 'OFF',
+        }));
 
-      let latestSensor = null;
-      try {
-        const sSnap  = await db().ref(`sensor_history/${farmId}/latest`).get();
-        latestSensor = sSnap.val();
-        if (latestSensor?._placeholder) latestSensor = null;
-      } catch (_) {}
+      // Calculate average soil moisture across all nodes
+      const avgMoisture = nodes.length > 0
+        ? nodes.reduce((sum, n) => sum + n.sensor_moisture, 0) / nodes.length
+        : 0;
+
+      // Get pump status and metadata
+      const pumpStatus    = firebaseData.pump || 'OFF';
+      const timestamp     = firebaseData.timestamp || new Date().toISOString();
+      const lastUpdated   = firebaseData.lastUpdated || Date.now();
+      const triggeredBy   = firebaseData.triggeredBy || 'system';
+      const valveSwitch   = firebaseData.valve_switch || 'OFF';
 
       return sendSuccess(res, {
         source:        'realtime',
-        soilMoisture:  { value: moistureValue, unit: '%', status: getMoistureStatus(moistureValue) },
-        motorStatus:   firebaseData.switch        || 'OFF',
-        precipitation: firebaseData.precipitation  || 0,
-        temperature:   latestSensor?.temperature   ?? null,
-        humidity:      latestSensor?.humidity      ?? null,
-        pH:            latestSensor?.pH            ?? null,
-        nitrogen:      latestSensor?.nitrogen      ?? null,
-        phosphorus:    latestSensor?.phosphorus    ?? null,
-        potassium:     latestSensor?.potassium     ?? null,
-        timestamp:     new Date().toISOString(),
+        soilMoisture:  { value: avgMoisture, unit: '%', status: getMoistureStatus(avgMoisture) },
+        motorStatus:   pumpStatus,
+        pumpStatus:    pumpStatus,
+        nodes:         nodes,
+        nodeCount:     nodes.length,
+        valveSwitch:   valveSwitch,
+        triggeredBy:   triggeredBy,
+        timestamp:     timestamp,
+        lastUpdated:   lastUpdated,
         raw:           firebaseData,
       });
     }
-  } catch (_) {
+  } catch (err) {
+    console.error('Firebase RTDB error:', err.message);
   }
 
+  // Fallback to InfluxDB if Firebase unavailable
   try {
     const flux = `
       from(bucket: "${INFLUX_BUCKET}")
         |> range(start: -7d)
         |> filter(fn: (r) => r._measurement == "sensor_readings")
-        |> filter(fn: (r) => r.farm_id == "${farmId}")
         |> filter(fn: (r) => r._field == "soil_moisture")
         |> last()
     `;
@@ -81,15 +92,15 @@ const getLatest = asyncHandler(async (req, res) => {
         timestamp:    rows[0]._time,
       });
     }
-  } catch (_) {}
+  } catch (err) {
+    console.error('InfluxDB error:', err.message);
+  }
 
   return sendError(res, 'No sensor data available', 404);
 });
 
 
 const getHistory = asyncHandler(async (req, res) => {
-  const farm   = req.user.getActiveFarm();
-  const farmId = farm?._id?.toString() || '0';
   const { period = '24h', startDate, endDate } = req.query;
 
   let rangeClause;
@@ -109,7 +120,6 @@ const getHistory = asyncHandler(async (req, res) => {
       from(bucket: "${INFLUX_BUCKET}")
         |> range(${rangeClause})
         |> filter(fn: (r) => r._measurement == "sensor_readings")
-        |> filter(fn: (r) => r.farm_id == "${farmId}")
         |> filter(fn: (r) => r._field == "${field}")
         |> aggregateWindow(every: ${window}, fn: mean, createEmpty: false)
     `))
@@ -144,14 +154,10 @@ const getHistory = asyncHandler(async (req, res) => {
 
 
 const getStats = asyncHandler(async (req, res) => {
-  const farm   = req.user.getActiveFarm();
-  const farmId = farm?._id?.toString() || '0';
-
   const moistureFlux = `
     from(bucket: "${INFLUX_BUCKET}")
       |> range(start: -24h)
       |> filter(fn: (r) => r._measurement == "sensor_readings")
-      |> filter(fn: (r) => r.farm_id == "${farmId}")
       |> filter(fn: (r) => r._field == "soil_moisture")
       |> filter(fn: (r) => r._value > 0.0)
       |> group()
@@ -170,7 +176,6 @@ const getStats = asyncHandler(async (req, res) => {
     from(bucket: "${INFLUX_BUCKET}")
       |> range(start: -24h)
       |> filter(fn: (r) => r._measurement == "sensor_readings")
-      |> filter(fn: (r) => r.farm_id == "${farmId}")
       |> filter(fn: (r) => r._field == "temperature")
       |> group()
       |> mean()

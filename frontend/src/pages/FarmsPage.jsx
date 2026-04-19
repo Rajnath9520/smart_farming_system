@@ -13,6 +13,7 @@ import { Input } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { Toggle } from "../components/ui/Toggle";
 import { PeriodTabs } from "../components/ui/PeriodTabs";
+import { NodeSensorCard } from "../components/crops/NodeSensorCard";
 import { ProgressBar } from "../components/ui/ProgressBar";
 import { LiveDot } from "../components/ui/LiveDot";
 import { Empty } from "../components/ui/Empty";
@@ -49,12 +50,12 @@ import toast from "react-hot-toast";
 
 const TABS = [
   { id: "motor",  label: "Motor Control", icon: Power   },
-  { id: "crops",  label: "Crop Schedule", icon: Sprout  },
+  { id: "crops",  label: "Crop", icon: Sprout  },
   { id: "sensor", label: "Sensor Live",   icon: Droplets},
   { id: "history",label: "History",       icon: History },
 ];
 
-const CROP_ICONS = { Wheat:"🌾", Rice:"🌾", Corn:"🌽", Cotton:"🌿", Custom:"🌱" };
+const CROP_ICONS = { Wheat:"🌾", Custom:"🌱" };
 
 
 function FarmSwitcher({ farms, activeFarmId, onSelect, onAdd }) {
@@ -87,7 +88,7 @@ function FarmSwitcher({ farms, activeFarmId, onSelect, onAdd }) {
                 {farm.name}
               </p>
               <p className="text-xs text-ink-400 truncate">
-                {farm.area} acres · {farm.soilType}
+                {farm.area} acres 
                 {farm.location?.district ? ` · ${farm.location.district}` : ""}
               </p>
             </div>
@@ -125,22 +126,68 @@ function MotorTab({ farm, farmId }) {
   const [stats,   setStats]   = useState({});
   const [elapsed, setElapsed] = useState(0);
 
-  useEffect(() => {
-    if (!farmId) return;
-    const r = ref(rtdb, `irrigation_control/${farmId}`);
-    onValue(r, snap => {
-      const d = snap.val();
-      if (d) setSensor({
-        soilMoisture: { value: parseFloat(d.SensorReading) || 0 },
-        motorStatus:  d.switch || "OFF",
-        lastUpdated:  d.lastUpdated,
-        triggeredBy:  d.triggeredBy,
-        eventId:      d.eventId,
-      });
-    });
-    return () => off(r);
-  }, [farmId]);
+ useEffect(() => {
+  if (!farmId) return;
 
+  const r = ref(rtdb, `smartirrrigation/FARMID1`);
+
+  onValue(r, snap => {
+    const d = snap.val();
+    
+
+    if (!d) return;
+
+    // ✅ Parse nodes
+    const nodes = Object.keys(d)
+      .filter(k => k.startsWith("node"))
+      .map(k => ({
+        node_id: d[k].node_id || k,
+        sensor_moisture: parseFloat(d[k].sensor_moisture) || 0,
+        valve_id: d[k].valve_id,
+        valve_switch: d[k].valve_switch1 || "OFF", // 🔥 fixed
+      }));
+
+    // ✅ Average moisture (IMPORTANT)
+    const avgMoisture =
+      nodes.length > 0
+        ? nodes.reduce((sum, n) => sum + n.sensor_moisture, 0) / nodes.length
+        : 0;
+
+    // ✅ Status calculation
+    const getStatus = (v) => {
+      if (v < 20) return "Low";
+      if (v < 40) return "Moderate";
+      if (v < 70) return "Optimal";
+      return "High";
+    };
+
+    setSensor({
+      source: "realtime",
+
+      soilMoisture: {
+        value: parseFloat(avgMoisture.toFixed(1)),
+        unit: "%",
+        status: getStatus(avgMoisture),
+      },
+
+      motorStatus: d.pump || "OFF",
+      pumpStatus: d.pump || "OFF",
+
+      nodes,
+      nodeCount: nodes.length,
+
+      timestamp: d.timestamp,
+      lastUpdated: d.lastUpdated,
+
+      triggeredBy: d.triggeredBy || "system",
+
+      raw: d,
+      live: true,
+    });
+  });
+
+  return () => off(r);
+}, [farmId]);
   const load = useCallback(async () => {
     const [st, c, w, ev, statsRes] = await Promise.allSettled([  
       irrigationAPI.status(),
@@ -149,12 +196,13 @@ function MotorTab({ farm, farmId }) {
       irrigationAPI.history({ period, limit: 20 }),
       irrigationAPI.stats(),
     ]);
-    console.log(status)
-    if (st.status === "fulfilled") setStatus(st.value.data.data || {});
+
+    if (st.status === "fulfilled") setStatus(st.value.data?.data || {});
 
     if (c.status  === "fulfilled") setCrop(c.value.data.data);
     if (w.status  === "fulfilled") setWeather(w.value.data.data?.weather);
     if (ev.status === "fulfilled") setEvents(ev.value.data.data?.events || []);
+
 
     if (statsRes.status === "fulfilled") {
       const d = statsRes.value.data.data || {};
@@ -178,6 +226,7 @@ function MotorTab({ farm, farmId }) {
   }, [status?.activeEvent]);
 
   const motorOn = (sensor?.motorStatus || status?.motor?.switch) === "ON";
+  
   const precipitation = weather?.current?.precipitationProbability ?? 28;
 
   const toggleMotor = async () => {
@@ -185,7 +234,9 @@ function MotorTab({ farm, farmId }) {
     setMLoad(true);
     try {
       const { data } = await irrigationAPI.control(action);
+      
       if (data.data?.requiresConfirmation) {
+        console.log("data",data)
         toast.custom(t => (
           <div className="card p-4 max-w-sm border-amber-200 bg-amber-50">
             <p className="font-bold text-ink-800 mb-1">High Rain Forecast</p>
@@ -341,7 +392,7 @@ function CropsTab({ farm, farmId }) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className="font-display font-bold text-lg text-ink-800">Crop Schedule</h3>
-          <p className="text-sm text-ink-400">{farm.name} · {farm.soilType} soil</p>
+          <p className="text-sm text-ink-400">{farm.name} </p>
         </div>
         <div className="flex items-center gap-2">
           {history.length > 0 && (
@@ -467,14 +518,16 @@ function CropsTab({ farm, farmId }) {
         open={newModal}
         onClose={() => setNewModal(false)}
         title="New Crop Schedule"
-        maxWidth="max-w-lg"
+        maxWidth="max-w-2xl"
       >
+        <div style={{ maxHeight: "75vh", overflowY: "auto", paddingRight: "4px" }}>
         <NewCropForm
           farmId={farmId}
           onSubmit={handleCreate}
           loading={creating}
           onCancel={() => setNewModal(false)}
         />
+  </div>
       </Modal>
 
       <Modal
@@ -580,15 +633,33 @@ function SensorTab({ farm, farmId }) {
 
   useEffect(() => {
     if (!farmId) return;
-    const r = ref(rtdb, `irrigation_control/${farmId}`);
+    const r = ref(rtdb, `smartirrrigation/FARMID1`);
     onValue(r, snap => {
       const d = snap.val();
-      if (d) setLive({
-        moisture:    parseFloat(d.SensorReading) || 0,
-        motor:       d.switch || "OFF",
-        rain:        d.precipitation || 0,
-        lastUpdated: d.lastUpdated,
-      });
+      if (d) {
+        // Parse multi-node structure: node1, node2, etc.
+        const nodes = Object.keys(d)
+          .filter(k => k.startsWith('node'))
+          .map(k => ({
+            node_id: d[k].node_id || k,
+            sensor_moisture: parseFloat(d[k].sensor_moisture) || 0,
+            valve_id: d[k].valve_id,
+            valve_switch: d[k].valve_switch || "OFF",
+          }));
+const avgMoisture =
+      nodes.length > 0
+        ? nodes.reduce((sum, n) => sum + (n.sensor_moisture || 0), 0) /
+          nodes.length
+        : 0
+        setLive({
+          moisture: avgMoisture,
+          motor: d.pump || "OFF",
+          rain: 0,
+          lastUpdated: d.timestamp,
+          nodes: nodes,
+          pump: d.pump,
+        });
+      }
     });
     return () => off(r);
   }, [farmId]);
@@ -610,7 +681,7 @@ function SensorTab({ farm, farmId }) {
             new Date(x.timestamp),
             period === "24h" ? "HH:mm" : "dd MMM"
           ),
-          moisture: x.soilMoisture?.value || 0,
+          moisture: x.moisture || 0,
           temp: x.temperature?.value || 0,
           humidity: x.humidity?.value || 0,
         }))
@@ -632,6 +703,7 @@ function SensorTab({ farm, farmId }) {
 
   return (
     <div className="space-y-5">
+      
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -652,7 +724,29 @@ function SensorTab({ farm, farmId }) {
         ))}
       </div>
 
-      <Card>
+      {/* ✅ MULTI NODE SENSOR CARDS */}
+      {live?.nodes?.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {live.nodes.map((node, idx) => (
+            <NodeSensorCard
+              key={idx}
+              nodeId={node.node_id || `Node ${idx + 1}`}
+              connected={true}
+              data={{
+                SensorReading: node.sensor_moisture,
+                valve_switch: node.valve_switch,
+                valve_id: node.valve_id,
+              }}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center text-sm text-ink-400 py-10">
+          No live sensor data available
+        </div>
+      )}
+
+      {/* <Card>
         <div className="px-5 py-3.5 border-b border-primary-50 flex items-center justify-between flex-wrap gap-2">
           <SectionHeader title="Moisture History" subtitle={`${farm.name} · ${farm.soilType}`} />
           <PeriodTabs value={period} onChange={setPeriod} options={["24h","7d","30d"]} />
@@ -679,6 +773,9 @@ function SensorTab({ farm, farmId }) {
           )}
         </div>
       </Card>
+       */}
+      
+      
     </div>
   );
 }
@@ -881,7 +978,7 @@ export default function FarmsPage() {
             </div>
             <div className="text-left">
               <p className="font-bold text-sm text-ink-800 leading-tight">{activeFarm?.name}</p>
-              <p className="text-xs text-ink-400">{activeFarm?.area} acres · {activeFarm?.soilType}</p>
+              <p className="text-xs text-ink-400">{activeFarm?.area} acres </p>
             </div>
             <ChevronDown
               size={15}
@@ -902,7 +999,7 @@ export default function FarmsPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* <div className="flex items-center gap-2 flex-wrap">
           {device ? (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-50 border border-primary-200 text-xs font-semibold text-primary-700">
               <Wifi size={12} />
@@ -920,10 +1017,10 @@ export default function FarmsPage() {
           )}
           <Badge variant="neutral">{activeFarm?.location?.district || "Farm"}</Badge>
           {activeFarm?.soilType && <Badge variant="neutral">{activeFarm.soilType}</Badge>}
-        </div>
+        </div> */}
 
 
-        <div className="ml-auto flex items-center gap-2">
+        {/* <div className="ml-auto flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setAddFarm(true)}>
             <Plus size={13} /> Add Farm
           </Button>
@@ -932,7 +1029,7 @@ export default function FarmsPage() {
               <Cpu size={13} /> Link Device
             </Button>
           )}
-        </div>
+        </div> */}
       </div>
 
       <div className="flex gap-1 bg-white border border-primary-100 p-1 rounded-2xl shadow-sm overflow-x-auto">

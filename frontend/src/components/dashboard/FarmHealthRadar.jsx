@@ -7,7 +7,7 @@ export function FarmHealthRadar({ moisture, temp, humidity, rain, cropHealth, ef
     { subject: "Crop Health",A: cropHealth ?? 72 },
     { subject: "Efficiency", A: efficiency ?? 68 },
     { subject: "Humidity",   A: Math.min(100, humidity ?? 60) },
-    { subject: "Rain Risk",  A: 100 - Math.min(100, rain ?? 30) },
+    { subject: "Rain Risk",  A: Math.min(100, rain ?? 30) },
   ];
   return (
     <ResponsiveContainer width="100%" height={190}>

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const sensorReadingSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    farmId: { type: String, required: true, index: true },
+    farmId: { type: String,  index: true },
     soilMoisture: {
       value: { type: Number, min: 0, max: 100 },
       unit: { type: String, default: '%' },
@@ -39,13 +39,12 @@ sensorReadingSchema.statics.getMoistureStatus = (value) => {
 };
 
 sensorReadingSchema.statics.getLatest = async function (userId, farmId) {
-  return this.findOne({ userId, farmId }).sort({ timestamp: -1 });
+  return this.findOne({ userId}).sort({ timestamp: -1 });
 };
 
 sensorReadingSchema.statics.getInRange = async function (userId, farmId, startDate, endDate) {
   return this.find({
     userId,
-    farmId,
     timestamp: { $gte: startDate, $lte: endDate },
   }).sort({ timestamp: 1 });
 };

@@ -113,9 +113,17 @@ export default function CropsPage() {
         </Card>
       )}
 
-      <Modal open={newModal} onClose={() => setNewModal(false)} title="New Crop Schedule" maxWidth="max-w-lg">
-        <NewCropForm onSubmit={handleCreate} loading={creating} />
-      </Modal>
+      <Modal
+  open={newModal}
+  onClose={() => setNewModal(false)}
+  title="New Crop Schedule"
+  maxWidth="max-w-xl"   
+>
+  {/* Scrollable inner wrapper */}
+  <div style={{ maxHeight: "75vh", overflowY: "auto", paddingRight: "4px" }}>
+    <NewCropForm onSubmit={handleCreate} loading={creating} onCancel={() => setNewModal(false)} />
+  </div>
+</Modal>
     </div>
   );
 }

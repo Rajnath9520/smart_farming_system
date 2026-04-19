@@ -2,6 +2,7 @@ const { admin } = require('../config/firebase');
 const User      = require('../models/User');
 const { sendSuccess, sendError, asyncHandler } = require('../utils/responseHelper');
 const logger    = require('../utils/logger');
+const { geocodeAddress } = require('../utils/geocode');
 
 
 async function verifyBearerToken(req) {
@@ -28,16 +29,37 @@ const register = asyncHandler(async (req, res) => {
   const userData = { name, email, firebaseUid, role, phone };
 
   if (farm) {
+    const fullAddress = `${farm.address}, ${farm.district}, ${farm.state}`;
+
+    const coords = await geocodeAddress(fullAddress);
+    let polygon = null;
+
+  if (Array.isArray(farm.boundary) && farm.boundary.length >= 4) {
+    const first = farm.boundary[0];
+    const last  = farm.boundary[farm.boundary.length - 1];
+
+    // close polygon
+    if (first[0] !== last[0] || first[1] !== last[1]) {
+      farm.boundary.push(first);
+    }
+
+    boundaryData = {
+      type: "Polygon",
+      coordinates: [farm.boundary]
+    };
+  }
+
     userData.farms = [{
       name:     farm.name     || 'My Farm',
       area:     farm.area     || 1,
       soilType: farm.soilType || 'Loamy',
       location: {
-        coordinates: farm.coordinates || [0, 0],
-        address:     farm.address     || '',
-        district:    farm.district    || '',
-        state:       farm.state       || '',
-      },
+          address: coords.formatted,
+          district: farm.district || '',
+          state: farm.state || '',
+          coordinates: [coords.lng, coords.lat] || [0,0]
+        },
+      boundary: boundaryData,
     }];
   }
 

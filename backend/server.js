@@ -26,6 +26,11 @@ const notificationRoutes = require('./routes/notifications');
 const adminRoutes        = require('./routes/admin');
 const farmRoutes         = require('./routes/farms');
 const deviceRoutes       = require('./routes/devices');
+const aiRoutes           = require('./routes/ai')
+// const aiRoutes2          = require( "./routes/aiRoutes2.js");
+
+// const { getLatestSensors }          = require("./services/sensorService.js") ;
+// const { flushAll }                  = require("./services/cacheService.js") ;
 
 const app = express();
 
@@ -34,19 +39,9 @@ connectDB();
 
 mongoose.connection.once('open', async () => {
   try {
-    const HardwareDevice = require('./models/HardwareDevice');
-
-    const devices = await HardwareDevice
-      .find({ status: 'activated' })
-      .select('farmId')
-      .lean();
-
-    const farmIds = devices
-      .map(d => d.farmId?.toString())
-      .filter(Boolean);
-
-    startRtdbPipeline(farmIds);
-    logger.info(`RTDB → InfluxDB pipeline started for ${farmIds.length} active farm(s)`);
+    // Start RTDB → InfluxDB pipeline for single farm
+    startRtdbPipeline();
+    logger.info(`✅ RTDB → InfluxDB pipeline started (single farm mode)`);
   } catch (err) {
     logger.error(`Failed to start RTDB pipeline: ${err.message}`);
   }
@@ -98,6 +93,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin',         adminRoutes);
 app.use('/api/farms',         farmRoutes);
 app.use('/api/devices',       deviceRoutes);
+app.use('/api/ai',            aiRoutes);
 
 app.use('*', (req, res) => {
   res.status(404).json({
@@ -114,6 +110,18 @@ app.use((err, req, res, next) => {
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 });
+// ── Scheduled jobs ────────────────────────────────────────
+// Flush AI twin cache every 15 min → forces fresh AI generation
+// cron.schedule("*/15 * * * *", () => {
+//   logger.info("⏱  Cron: flushing twin cache");
+//   flushAll();
+// });
+ 
+// // Warm sensor cache every 30 s (RTDB pre-fetch)
+// cron.schedule("*/1 * * * *", async () => {
+//   try { await getLatestSensors(); }
+//   catch { /* silent */ }
+// });
 
 const PORT   = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {

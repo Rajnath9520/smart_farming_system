@@ -82,7 +82,7 @@ export default function WeatherPage() {
 
  
   const rainNow = current?.precipitationProbability ?? 0;
-  console.log("rainbow", rainNow)
+  
  
   return (
     <div className="space-y-5 animate-fade-in">
@@ -105,7 +105,7 @@ export default function WeatherPage() {
         </Button>
       </div>
  
-      <IrrigationRecommendation weather={current} sensor={sensor} crop={crop} />
+      {/* <IrrigationRecommendation weather={current} sensor={sensor} crop={crop} /> */}
  
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 overflow-hidden p-0">

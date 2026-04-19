@@ -154,3 +154,34 @@
 2026-04-11 13:37:30 [error]:  - /api/analytics/moisture-trend?period=7d - GET - ::1
 2026-04-11 13:37:30 [error]:  - /api/analytics/heatmap?year=2026 - GET - ::1
 2026-04-17 10:22:30 [error]: MongoDB Connection Error: connect ECONNREFUSED ::1:27017, connect ECONNREFUSED 127.0.0.1:27017
+2026-04-17 14:21:54 [error]: Auth middleware error: Firebase ID token has incorrect "aud" (audience) claim. Expected "meromesh-14ae5" but got "smart-irrigation-c643b". Make sure the ID token comes from the same Firebase project as the service account used to authenticate this SDK. See https://firebase.google.com/docs/auth/admin/verify-id-tokens for details on how to retrieve an ID token.
+2026-04-17 14:21:54 [error]: Auth middleware error: Firebase ID token has incorrect "aud" (audience) claim. Expected "meromesh-14ae5" but got "smart-irrigation-c643b". Make sure the ID token comes from the same Firebase project as the service account used to authenticate this SDK. See https://firebase.google.com/docs/auth/admin/verify-id-tokens for details on how to retrieve an ID token.
+2026-04-17 14:35:11 [error]: Auth middleware error: Firebase ID token has incorrect "aud" (audience) claim. Expected "meromesh-14ae5" but got "smart-irrigation-c643b". Make sure the ID token comes from the same Firebase project as the service account used to authenticate this SDK. See https://firebase.google.com/docs/auth/admin/verify-id-tokens for details on how to retrieve an ID token.
+2026-04-17 14:37:13 [error]: Auth middleware error: Firebase ID token has incorrect "aud" (audience) claim. Expected "meromesh-14ae5" but got "smart-irrigation-c643b". Make sure the ID token comes from the same Firebase project as the service account used to authenticate this SDK. See https://firebase.google.com/docs/auth/admin/verify-id-tokens for details on how to retrieve an ID token.
+2026-04-18 14:53:28 [error]: Stop irrigation error: farmId is not defined
+2026-04-18 14:53:28 [error]: farmId is not defined - /api/irrigation/control - POST - ::1
+2026-04-18 14:53:31 [error]: Stop irrigation error: farmId is not defined
+2026-04-18 14:53:31 [error]: farmId is not defined - /api/irrigation/control - POST - ::1
+2026-04-18 14:53:47 [error]: Stop irrigation error: farmId is not defined
+2026-04-18 14:53:47 [error]: farmId is not defined - /api/irrigation/control - POST - ::1
+2026-04-18 14:53:59 [error]: Stop irrigation error: farmId is not defined
+2026-04-18 14:53:59 [error]: farmId is not defined - /api/irrigation/control - POST - ::1
+2026-04-18 14:54:25 [error]: Stop irrigation error: farmId is not defined
+2026-04-18 14:54:25 [error]: farmId is not defined - /api/irrigation/control - POST - ::1
+2026-04-18 14:55:56 [error]: Stop irrigation error: farmId is not defined
+2026-04-18 14:55:56 [error]: farmId is not defined - /api/irrigation/control - POST - ::1
+2026-04-18 14:57:06 [error]: Stop irrigation error: farmId is not defined
+2026-04-18 14:57:06 [error]: farmId is not defined - /api/irrigation/control - POST - ::1
+2026-04-18 14:59:16 [error]: farmId is not defined - /api/irrigation/status - GET - ::1
+2026-04-18 15:46:12 [error]: farmId is not defined
+2026-04-18 15:46:12 [error]: farmId is not defined - /api/irrigation/status - GET - ::1
+2026-04-18 15:46:12 [error]: farmId is not defined
+2026-04-18 15:46:12 [error]: farmId is not defined - /api/irrigation/status - GET - ::1
+2026-04-18 15:46:20 [error]: farmId is not defined
+2026-04-18 15:46:20 [error]: farmId is not defined - /api/irrigation/status - GET - ::1
+2026-04-18 15:46:20 [error]: farmId is not defined
+2026-04-18 15:46:20 [error]: farmId is not defined - /api/irrigation/status - GET - ::1
+2026-04-18 15:46:23 [error]: farmId is not defined
+2026-04-18 15:46:23 [error]: farmId is not defined - /api/irrigation/status - GET - ::1
+2026-04-18 15:46:23 [error]: farmId is not defined
+2026-04-18 15:46:23 [error]: farmId is not defined - /api/irrigation/status - GET - ::1

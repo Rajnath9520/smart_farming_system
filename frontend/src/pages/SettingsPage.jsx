@@ -68,9 +68,9 @@ export default function SettingsPage() {
       await farmAPI.add({
         name: newFarm.name, area: parseFloat(newFarm.area) || 1,
         soilType: newFarm.soilType,
-        location: { district: newFarm.district, state: newFarm.state },
+        location: { address:newFarm.address,district: newFarm.district, state: newFarm.state },
       });
-      toast.success("Farm added 🌾");
+      toast.success("Farm added ");
       setAddFarm(false);
       setNewFarm({ name:"", area:"", soilType:"Loamy", district:"", state:"" });
       syncDb();
@@ -138,7 +138,7 @@ export default function SettingsPage() {
         </div>
       </Section>
 
-      <Section icon={MapPin} title="My Farms & Devices">
+      {/* <Section icon={MapPin} title="My Farms & Devices">
         <div className="space-y-3">
           {farms.map((f, i) => {
             const dev = deviceForFarm(f._id);
@@ -229,7 +229,7 @@ export default function SettingsPage() {
             </Button>
           )}
         </div>
-      </Section>
+      </Section> */}
 
       <Section icon={Bell} title="Notifications">
         <div className="space-y-3.5">

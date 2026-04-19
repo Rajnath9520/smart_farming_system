@@ -1,18 +1,24 @@
 /**
-
- * Two listeners per farm:
- *   1. irrigation_control/{farmId}    — live motor state + soil moisture
- *   2. sensor_history/{farmId}/latest — full IoT multi-sensor reading
+ * Single Farm Real-time Database Pipeline
+ * 
+ * Listens to: smartirrrigation (single root)
+ * Structure:
+ *   {
+ *     node1, node2, ...: { node_id, sensor_moisture, valve_id, valve_switch1 }
+ *     pump: "ON" | "OFF"
+ *     timestamp: ISO string
+ *     lastUpdated: unix timestamp
+ *     triggeredBy: string
+ *   }
  *
  * InfluxDB data model:
  *   measurement: "sensor_readings"
- *     tags  : farm_id, source, motor_status, triggered_by
- *     fields: soil_moisture, temperature, humidity, ph,
- *             nitrogen, phosphorus, potassium, precipitation
+ *     tags  : source, motor_status, triggered_by
+ *     fields: soil_moisture (avg), node_count, pump_status
  *
  *   measurement: "irrigation_events"
- *     tags  : farm_id, action, triggered_by
- *     fields: event_id (string), moisture_at_trigger (float)
+ *     tags  : action, triggered_by
+ *     fields: event_id, moisture_at_trigger
  */
 
 const { db }              = require('../config/firebase');
@@ -34,117 +40,84 @@ function writePoint(point) {
   }
 }
 
-
 writeApi.on?.('error', (err) => {
   logger.error(`InfluxDB write batch error: ${err.message}`);
 });
 
-const previousSwitchState = {};
+let previousPumpState = null;
+let lastTimestamp = null;
 
 
-function attachIrrigationListener(farmId) {
-  const path = `irrigation_control/${farmId}`;
+function attachFarmListener() {
+  const path = `smartirrrigation`;
 
   db().ref(path).on(
     'value',
     (snapshot) => {
       const data = snapshot.val();
-      if (!data) return;
+      if (!data || data._placeholder) return;
 
-      const ts            = toDate(data.lastUpdated);
-      const currentSwitch = data.switch || 'OFF';
-      const moisture      = parseFloat(data.SensorReading) || 0;
+      // Check if timestamp changed (avoid duplicate writes)
+      const currentTimestamp = data.timestamp || data.lastUpdated;
+      if (currentTimestamp && currentTimestamp === lastTimestamp) return;
+      lastTimestamp = currentTimestamp;
 
+      // Extract nodes
+      const nodes = Object.keys(data)
+        .filter(k => k.startsWith('node'))
+        .map(k => ({
+          node_id: data[k].node_id,
+          sensor_moisture: parseFloat(data[k].sensor_moisture) || 0,
+          valve_id: data[k].valve_id,
+          valve_switch: data[k].valve_switch1 || 'OFF',
+        }));
+
+      // Calculate average soil moisture
+      const avgMoisture = nodes.length > 0
+        ? nodes.reduce((sum, n) => sum + n.sensor_moisture, 0) / nodes.length
+        : 0;
+
+      const pumpStatus = data.pump || 'OFF';
+      const ts = toDate(data.timestamp || data.lastUpdated);
+
+      // Write sensor reading
       const sensorPoint = new Point('sensor_readings')
-        .tag('farm_id',      farmId)
-        .tag('source',       'irrigation_control')
-        .tag('motor_status', currentSwitch)
-        .tag('triggered_by', data.triggeredBy || 'system')
-        .floatField('soil_moisture', moisture)
-        .floatField('precipitation', parseFloat(data.precipitation) || 0)
+        .tag('source',        'smartirrrigation')
+        .tag('motor_status',  pumpStatus)
+        .tag('triggered_by',  data.triggeredBy || 'system')
+        .floatField('soil_moisture', avgMoisture)
+        .intField('node_count',      nodes.length)
         .timestamp(ts);
 
       writePoint(sensorPoint);
-      console.log("Data written to InfluxDB")
+      console.log(`✅ InfluxDB: avg moisture=${avgMoisture}%, pump=${pumpStatus}, nodes=${nodes.length}`);
 
-      const prev = previousSwitchState[farmId];
-      if (prev !== undefined && prev !== currentSwitch) {
+      // Write pump state change events
+      if (previousPumpState !== undefined && previousPumpState !== pumpStatus) {
         const eventPoint = new Point('irrigation_events')
-          .tag('farm_id',      farmId)
-          .tag('action',       currentSwitch)
+          .tag('action',       pumpStatus)
           .tag('triggered_by', data.triggeredBy || 'system')
-          .stringField('event_id',           data.eventId || `${farmId}-${Date.now()}`)
-          .floatField('moisture_at_trigger', moisture)
+          .stringField('event_id',           data.eventId || `sys-${Date.now()}`)
+          .floatField('moisture_at_trigger', avgMoisture)
           .timestamp(ts);
 
         writePoint(eventPoint);
-        logger.info(`Farm ${farmId}: motor ${prev} → ${currentSwitch} → InfluxDB`);
+        logger.info(`🔄 Pump state: ${previousPumpState} → ${pumpStatus} → InfluxDB`);
       }
 
-      previousSwitchState[farmId] = currentSwitch;
+      previousPumpState = pumpStatus;
     },
     (err) => logger.error(`RTDB listener error [${path}]: ${err.message}`)
   );
 
-  logger.info(`RTDB pipeline: listening → ${path}`);
-}
-
-function attachSensorHistoryListener(farmId) {
-  const path = `sensor_history/${farmId}/latest`;
-  let lastTimestamp = null;
-
-  db().ref(path).on(
-    'value',
-    (snapshot) => {
-      const data = snapshot.val();
-      if (!data)             return;
-      if (data._placeholder) return;
-
-      const ts = data.timestamp || null;
-      if (ts && ts === lastTimestamp) return;  
-      lastTimestamp = ts;
-
-      const point = new Point('sensor_readings')
-        .tag('farm_id', farmId)
-        .tag('source',  'sensor_history')
-        .timestamp(toDate(ts));
-
-      if (data.moisture    != null) point.floatField('soil_moisture', parseFloat(data.moisture));
-      if (data.temperature != null) point.floatField('temperature',   parseFloat(data.temperature));
-      if (data.humidity    != null) point.floatField('humidity',      parseFloat(data.humidity));
-      if (data.pH          != null) point.floatField('ph',            parseFloat(data.pH));
-      if (data.nitrogen    != null) point.floatField('nitrogen',      parseFloat(data.nitrogen));
-      if (data.phosphorus  != null) point.floatField('phosphorus',    parseFloat(data.phosphorus));
-      if (data.potassium   != null) point.floatField('potassium',     parseFloat(data.potassium));
-
-      writePoint(point);
-      logger.info(`Farm ${farmId}: full sensor reading → InfluxDB`);
-    },
-    (err) => logger.error(`RTDB listener error [${path}]: ${err.message}`)
-  );
-
-  logger.info(`RTDB pipeline: listening → ${path}`);
+  logger.info(`✅ RTDB pipeline: listening → ${path}`);
 }
 
 
-
-function startRtdbPipeline(farmIds = []) {
-  if (!farmIds.length) {
-    logger.warn('RTDB pipeline: no active farms — no listeners attached');
-    return;
-  }
-  logger.info(`RTDB pipeline: starting for ${farmIds.length} farm(s)`);
-  for (const farmId of farmIds) {
-    attachIrrigationListener(farmId);
-    attachSensorHistoryListener(farmId);
-  }
+function startRtdbPipeline() {
+  attachFarmListener();
+  logger.info(`✅ RTDB pipeline: started for single farm`);
 }
 
-function addFarmToPipeline(farmId) {
-  if (previousSwitchState[farmId] !== undefined) return;
-  attachIrrigationListener(farmId);
-  attachSensorHistoryListener(farmId);
-  logger.info(`RTDB pipeline: added listener for new farm ${farmId}`);
-}
 
-module.exports = { startRtdbPipeline, addFarmToPipeline };
+module.exports = { startRtdbPipeline };

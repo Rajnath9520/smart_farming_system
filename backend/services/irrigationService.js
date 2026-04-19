@@ -1,5 +1,3 @@
-
-
 const { db }              = require('../config/firebase');
 const IrrigationEvent     = require('../models/IrrigationEvent');
 const SensorReading       = require('../models/SensorReading');
@@ -8,305 +6,295 @@ const WeatherData         = require('../models/WeatherData');
 const notificationService = require('./notificationService');
 const logger              = require('../utils/logger');
 
-const FLOW_LPM          = 15;       
-const WARNING_DELAY_MS  = 10 * 60 * 1000;  
+const FLOW_LPM = 15;
+const WARNING_DELAY_MS = 10 * 60 * 1000;
 
-const pendingAutoStarts = new Map();
+// Firebase root path for device control
+const FIREBASE_ROOT = "smartirrrigation/FARMID1";
 
-const evaluateIrrigationNeed = async (userId, farmId) => {
+let pendingAutoStart = null;
+
+
+// ===================== DECISION ENGINE =====================
+/**
+ * Evaluate if irrigation is needed based on soil moisture, weather, and crop stage
+ * @param {string} userId - User ID
+ * @returns {object} Decision object with soilMoisture, rainProbability, moistureThreshold, shouldIrrigate
+ */
+const evaluateIrrigationNeed = async (userId) => {
   try {
-    const latestSensor = await SensorReading.getLatest(userId, farmId);
-    if (!latestSensor) {
-      logger.warn(`No sensor data for user ${userId}, farm ${farmId}`);
-      return { shouldIrrigate: false, reason: 'No sensor data available' };
-    }
+    const snap = await db().ref(`${FIREBASE_ROOT}`).get();
+const data = snap.val();
 
-    const soilMoisture = latestSensor.soilMoisture?.value;
+if (!data) {
+  return { shouldIrrigate: false, reason: "No sensor data" };
+}
 
-    const weatherData = await WeatherData.findOne({ userId, farmId }).sort({ fetchedAt: -1 });
+// 🔥 extract node moisture
+const nodes = Object.keys(data)
+  .filter(k => k.startsWith("node"))
+  .map(k => parseFloat(data[k].sensor_moisture) || 0);
+
+if (!nodes.length) {
+  return { shouldIrrigate: false, reason: "No sensor data" };
+}
+
+const soilMoisture =
+  nodes.reduce((a, b) => a + b, 0) / nodes.length;
+
+    const weatherData = await WeatherData.findOne({ userId }).sort({ fetchedAt: -1 });
+
     const now = new Date();
-    const next24hRainProb = weatherData?.hourlyForecast
+    const rainProb = weatherData?.hourlyForecast
       ?.filter(h => new Date(h.time) > now)
       .slice(0, 8)
-      .reduce((max, h) => Math.max(max, h.precipitationProbability || 0), 0)
-      ?? 0;
+      .reduce((m, h) => Math.max(m, h.precipitationProbability || 0), 0) ?? 0;
 
-    logger.info(
-      `Rain probability next 24h for farm ${farmId}: ${next24hRainProb}% ` +
-      `(${weatherData?.hourlyForecast?.filter(h => new Date(h.time) > now).length ?? 0} future slots)`
-    );
+    let threshold = 40;
 
-    const cropSchedule = await CropSchedule.findOne({ userId, farmId, isActive: true });
-    let moistureThreshold = 40;
-    let currentStage      = null;
+    const crop = await CropSchedule.findOne({ userId, isActive: true });
 
-    if (cropSchedule) {
-      const daysSinceSowing = Math.floor(
-        (Date.now() - new Date(cropSchedule.sowingDate).getTime()) / (1000 * 60 * 60 * 24)
-      );
-      currentStage = cropSchedule.stages.find(
-        s => daysSinceSowing >= s.startDay && daysSinceSowing <= s.endDay
-      );
-      if (currentStage) moistureThreshold = currentStage.moistureThreshold;
+
+    if (crop) {
+      const days = Math.floor((Date.now() - new Date(crop.sowingDate)) / 86400000);
+      const stage = crop.stages.find(s => days >= s.startDay && days <= s.endDay);
+      if (stage) threshold = stage.moistureThreshold;
     }
 
-    const decision = {
+    return {
       soilMoisture,
-      moistureThreshold,
-      rainProbability: next24hRainProb,
-      currentStage:    currentStage?.name,
-      shouldIrrigate:  false,
-      reason:          '',
-      warnings:        [],
+      rainProbability: rainProb,
+      moistureThreshold: threshold,
+      shouldIrrigate: soilMoisture < threshold && rainProb < 70
     };
 
-    if (soilMoisture == null) {
-      decision.reason = 'Sensor data unavailable';
-      return decision;
-    }
-
-    if (next24hRainProb >= 70) {
-      decision.reason = `High rain probability (${next24hRainProb}%) — irrigation not needed`;
-      decision.warnings.push(`Rain expected with ${next24hRainProb}% probability`);
-      return decision;
-    }
-
-    if (next24hRainProb >= 40) {
-      decision.warnings.push(`Moderate rain probability (${next24hRainProb}%) in next 24h`);
-    }
-
-    if (soilMoisture < moistureThreshold) {
-      decision.shouldIrrigate = true;
-      decision.reason = `Soil moisture (${soilMoisture.toFixed(1)}%) below threshold (${moistureThreshold}%)`;
-    } else {
-      decision.reason = `Soil moisture adequate (${soilMoisture.toFixed(1)}%)`;
-    }
-
-    return decision;
-  } catch (error) {
-    logger.error(`Irrigation decision engine error: ${error.message}`);
-    throw error;
+  } catch (err) {
+    logger.error(`Error evaluating irrigation need: ${err.message}`);
+    throw err;
   }
 };
 
-const cancelPendingStart = (farmId) => {
-  const pending = pendingAutoStarts.get(farmId);
-  if (pending) {
-    clearTimeout(pending.timerId);
-    pendingAutoStarts.delete(farmId);
-    logger.info(`Cancelled pending auto-start for farm ${farmId}`);
-    return true;
+
+// ===================== START =====================
+
+const startIrrigation = async (userId, type = "auto", triggeredBy = "system") => {
+
+  const running = await IrrigationEvent.findOne({ userId, status: "running" });
+  
+  if (running) {
+    logger.warn(`Irrigation already running for user ${userId}`);
+    
   }
-  return false;
+
+  const event = await IrrigationEvent.create({
+    userId,
+    type,
+    triggeredBy,
+    status: "running",
+    startTime: new Date(),
+    duration: 0,
+    waterUsed: 0
+  });
+  
+
+  try {
+    
+    await db().ref(`${FIREBASE_ROOT}`).update({
+      pump: "ON",
+      timestamp: new Date().toISOString(),
+      eventId: event._id.toString(),
+      triggeredBy
+    });
+   
+  } catch (err) {
+    logger.error(`Firebase update failed: ${err.message}`);
+  }
+
+  logger.info(`Started irrigation event ${event._id} (${triggeredBy})`);
+
+  return event;
 };
 
-const scheduleAutoIrrigation = async (userId, farmId, farmName, decision) => {
-  if (pendingAutoStarts.has(farmId)) {
-    const pending = pendingAutoStarts.get(farmId);
-    logger.info(
-      `Auto-start already pending for farm ${farmId} ` +
-      `(scheduled at ${pending.scheduledAt.toISOString()}) — skipping`
-    );
+
+// ===================== STOP =====================
+/**
+ * Stop irrigation event and calculate water usage
+ * @param {string} userId - User ID
+ * @param {string} eventId - Optional specific event ID to stop
+ * @returns {object} Completed IrrigationEvent or null
+ */
+const stopIrrigation = async (userId, eventId = null) => {
+
+  if (pendingAutoStart) {
+    clearTimeout(pendingAutoStart);
+    pendingAutoStart = null;
+  }
+
+  try {
+    await db().ref(`${FIREBASE_ROOT}`).update({
+      pump: "OFF",
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    logger.error(`Firebase update failed: ${err.message}`);
+  }
+
+  const event = eventId
+    ? await IrrigationEvent.findById(eventId)
+    : await IrrigationEvent.findOne({ userId, status: "running" });
+
+  if (!event) {
+    logger.warn(`No running event found for user ${userId}`);
+    return null;
+  }
+
+  const end = new Date();
+  const duration = Math.max(1, Math.round((end - event.startTime) / 60000));
+
+  event.status = "completed";
+  event.endTime = end;
+  event.duration = duration;
+  event.waterUsed = duration * FLOW_LPM;
+
+  await event.save();
+
+  logger.info(`Stopped irrigation event ${event._id}, duration: ${duration}min, water: ${event.waterUsed}L`);
+
+  return event;
+};
+
+
+// ===================== AUTO SCHEDULE =====================
+/**
+ * Schedule automatic irrigation with pre-irrigation alert
+ * @param {string} userId - User ID
+ * @param {string} farmName - Farm name for notification
+ * @param {object} decision - Decision object from evaluateIrrigationNeed
+ * @returns {object} Scheduling result
+ */
+const scheduleAutoIrrigation = async (userId, farmName, decision) => {
+
+  if (pendingAutoStart) {
     return { scheduled: true, alreadyPending: true };
   }
 
-  const running = await IrrigationEvent.findOne({ userId, farmId, status: 'running' });
+  const running = await IrrigationEvent.findOne({ userId, status: "running" });
   if (running) {
-    logger.info(`Irrigation already running for farm ${farmId} — skipping schedule`);
-    return { scheduled: false, reason: 'Already running' };
+    return { scheduled: false, reason: "Already running" };
   }
 
-  logger.info(`Scheduling auto-irrigation for farm ${farmId} in 10 minutes`);
+  try {
+    await notificationService.sendPreIrrigationAlert(
+      userId,
+      farmName,
+      decision.soilMoisture,
+      decision.moistureThreshold
+    );
+  } catch (err) {
+    logger.error(`Notification failed: ${err.message}`);
+  }
 
-  await notificationService.sendPreIrrigationAlert(
-    userId,
-    farmName,
-    decision.soilMoisture,
-    decision.moistureThreshold
-  );
-
-  const timerId = setTimeout(async () => {
-    pendingAutoStarts.delete(farmId);  
-
+  pendingAutoStart = setTimeout(async () => {
     try {
-      const freshDecision = await evaluateIrrigationNeed(userId, farmId);
+      const fresh = await evaluateIrrigationNeed(userId);
 
-      if (!freshDecision.shouldIrrigate) {
-        logger.info(
-          `Auto-irrigation for farm ${farmId} cancelled after re-evaluation: ${freshDecision.reason}`
-        );
-        await notificationService.sendAll({
-          userId,
-          title:    'Irrigation Cancelled',
-          message:  `Automatic irrigation for ${farmName} was cancelled: ${freshDecision.reason}`,
-          type:     'info',
-          category: 'irrigation_cancelled',
-          sms:      true,  
-        });
+      if (!fresh.shouldIrrigate) {
+        logger.info(`Skipping auto-irrigation: conditions no longer met for ${userId}`);
         return;
       }
 
-      logger.info(`Re-evaluation passed for farm ${farmId} — starting irrigation now`);
-      await startIrrigation(userId, farmId, 'automatic', 'auto');
+      await startIrrigation(userId, "auto", "auto");
 
     } catch (err) {
-      logger.error(`Delayed auto-start failed for farm ${farmId}: ${err.message}`);
+      logger.error(`Auto-irrigation failed: ${err.message}`);
     }
   }, WARNING_DELAY_MS);
 
-  pendingAutoStarts.set(farmId, {
-    timerId,
-    userId,
-    scheduledAt: new Date(),
-  });
+  logger.info(`Scheduled auto-irrigation for ${userId} in ${WARNING_DELAY_MS}ms`);
 
-  return { scheduled: true, alreadyPending: false };
+  return { scheduled: true };
 };
 
-const startIrrigation = async (userId, farmId, type = 'automatic', triggeredBy = 'system') => {
+
+// ===================== STATUS =====================
+/**
+ * Get current motor/pump status from Firebase
+ * @returns {object} Motor status with pump state and timestamp
+ */
+const getMotorStatus = async () => {
   try {
-    const alreadyRunning = await IrrigationEvent.findOne({ userId, farmId, status: 'running' });
-    if (alreadyRunning) {
-      logger.warn(`Irrigation already running for farm ${farmId}, skipping start`);
-      return alreadyRunning;
-    }
+    const snap = await db().ref(`${FIREBASE_ROOT}`).get();
+    const data = snap.val() || {};
 
-    const event = await IrrigationEvent.create({
-      userId,
-      farmId,
-      type,
-      triggeredBy,
-      status:    'running',
-      startTime: new Date(),
-      waterUsed: 0,
-      duration:  0,
-    });
+    return {
+      pump: data.pump || "OFF",
+      timestamp: data.timestamp,
+      triggeredBy: data.triggeredBy
+    };
 
-    await db().ref(`irrigation_control/${farmId}`).update({
-      switch:      'ON',
-      lastUpdated: Date.now(),
-      triggeredBy,
-      eventId:     event._id.toString(),
-    });
-
-    await notificationService.sendAll({
-      userId,
-      title:    'Irrigation Started',
-      message:  `${type === 'manual' ? 'Manual' : 'Automatic'} irrigation has started.`,
-      type:     'irrigation',
-      category: 'irrigation_start',
-      metadata: { farmId, eventId: event._id.toString() },
-    });
-
-    logger.info(`▶ Irrigation started — user ${userId}, farm ${farmId}, by ${triggeredBy}`);
-    return event;
-  } catch (error) {
-    logger.error(`Start irrigation error: ${error.message}`);
-    throw error;
-  }
-};
-
-const stopIrrigation = async (userId, farmId, eventId = null) => {
-  try {
-    cancelPendingStart(farmId);
-
-    await db().ref(`irrigation_control/${farmId}`).update({
-      switch:      'OFF',
-      lastUpdated: Date.now(),
-    });
-
-    const event = eventId
-      ? await IrrigationEvent.findById(eventId)
-      : await IrrigationEvent.findOne({ userId, farmId, status: 'running' });
-
-    if (event) {
-      const endTime     = new Date();
-      const durationMin = Math.max(
-        1,
-        Math.round((endTime.getTime() - event.startTime.getTime()) / 60_000)
-      );
-      event.status    = 'completed';
-      event.endTime   = endTime;
-      event.duration  = durationMin;
-      event.waterUsed = parseFloat((durationMin * FLOW_LPM).toFixed(2));
-      await event.save();
-
-      logger.info(
-        `Irrigation stopped — farm ${farmId}, duration ${durationMin} min, water ${event.waterUsed} L`
-      );
-    } else {
-      logger.warn(`stopIrrigation: no running event found for farm ${farmId}`);
-    }
-
-    await notificationService.sendAll({
-      userId,
-      title:    'Irrigation Stopped',
-      message:  event
-        ? `Irrigation completed. Used ${event.waterUsed} L over ${event.duration} min.`
-        : 'Irrigation system has been turned off.',
-      type:     'info',
-      category: 'irrigation_stop',
-      metadata: { farmId, eventId: event?._id?.toString() },
-    });
-
-    return event;
-  } catch (error) {
-    logger.error(`Stop irrigation error: ${error.message}`);
-    throw error;
+  } catch (err) {
+    logger.error(`Failed to get motor status: ${err.message}`);
+    return { pump: "UNKNOWN", error: "Failed to fetch status" };
   }
 };
 
 
-const getMotorStatus = async (farmId) => {
-  try {
-    const snapshot = await db().ref(`irrigation_control/${farmId}`).get();
-    const status   = snapshot.val() || { switch: 'OFF' };
+// ===================== MANUAL =====================
+/**
+ * Manual override - turn pump ON or OFF with warnings
+ * @param {string} userId - User ID
+ * @param {string} action - 'ON' or 'OFF'
+ * @param {boolean} confirmed - Whether user confirmed warnings
+ * @returns {object} Result with success status, event, and optional warnings/confirmation flag
+ */
+const manualOverride = async (userId, action, confirmed = false) => {
 
-    const pending = pendingAutoStarts.get(farmId);
-    if (pending) {
-      const elapsed   = Date.now() - pending.scheduledAt.getTime();
-      const remaining = Math.max(0, Math.ceil((WARNING_DELAY_MS - elapsed) / 1000));
-      status.pendingAutoStart    = true;
-      status.pendingStartsInSecs = remaining;
-    }
-
-    return status;
-  } catch (error) {
-    logger.error(`Get motor status error: ${error.message}`);
-    return { switch: 'UNKNOWN' };
-  }
-};
-
-const manualOverride = async (userId, farmId, action, userConfirmed = false) => {
-  if (action === 'OFF') {
-    const event = await stopIrrigation(userId, farmId);
+  if (action === "OFF") {
+    const event = await stopIrrigation(userId);
     return { success: true, event };
   }
 
-  const decision = await evaluateIrrigationNeed(userId, farmId);
+  if (action !== "ON") {
+    throw new Error(`Invalid action: ${action}`);
+  }
+
+  const decision = await evaluateIrrigationNeed(userId);
   const warnings = [];
 
+  // Check for warnings
   if (!decision.shouldIrrigate && (decision.soilMoisture ?? 0) > 60) {
-    warnings.push(`Soil moisture is adequate (${decision.soilMoisture?.toFixed(1)}%)`);
+    warnings.push("Soil already wet (moisture > 60%)");
   }
+
   if (decision.rainProbability >= 40) {
-    warnings.push(`Rain probability is ${decision.rainProbability}%`);
+    warnings.push(`Rain expected (${decision.rainProbability}% probability)`);
   }
 
-  if (warnings.length > 0 && !userConfirmed) {
-    return { requiresConfirmation: true, warnings };
+  // Return confirmation prompt if warnings exist and not confirmed
+  if (warnings.length && !confirmed) {
+    return { 
+      requiresConfirmation: true, 
+      warnings,
+      decision
+    };
   }
 
-  const event = await startIrrigation(userId, farmId, 'manual', 'manual');
-  return { success: true, event, warnings };
+  const event = await startIrrigation(userId, "manual", "manual");
+
+  return { 
+    success: true, 
+    event, 
+    warnings,
+    decision
+  };
 };
+
 
 module.exports = {
   evaluateIrrigationNeed,
-  scheduleAutoIrrigation,  
+  scheduleAutoIrrigation,
   startIrrigation,
   stopIrrigation,
-  cancelPendingStart,
   getMotorStatus,
-  manualOverride,
+  manualOverride
 };

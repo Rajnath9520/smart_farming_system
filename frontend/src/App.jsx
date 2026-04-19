@@ -61,7 +61,7 @@ function App() {
             <Route index                element={<DashboardPage />} />
             <Route path="farms"         element={<FarmsPage />} />
             <Route path="weather"       element={<WeatherPage />} />
-            <Route path="analytics"     element={<AnalyticsPage />} />
+            {/* <Route path="analytics"     element={<AnalyticsPage />} /> */}
             <Route path="ai"           element={<AIPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="settings"      element={<SettingsPage />} />

@@ -4,7 +4,6 @@
 //   GET  /api/ai/stress         — lightweight stress-only poll
 //   POST /api/ai/simulate       — what-if scenarios
 //   GET  /api/sensors/latest    — live sensor (Firebase RTDB → InfluxDB fallback)
-//   GET  /api/sensors/history   — InfluxDB time-series
 //   GET  /api/sensors/stats     — 24h aggregates
 //   GET  /api/irrigation/status — motor state + AI decision
 //   GET  /api/irrigation/stats  — today/week aggregates
@@ -20,6 +19,8 @@ import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Skeleton } from "../components/ui/Skeleton";
 import { LiveDot } from "../components/ui/LiveDot";
+
+import { calcCropHealthScore, CropHealthScore } from "../components/dashboard/CropHealthScore";
 
 import {
   AreaChart, Area, ReferenceLine, BarChart, Bar,
@@ -63,218 +64,6 @@ const RISK_CFG = {
   critical:         { color:"#EF4444", label:"Critical",        bg:"bg-red-50      border-red-300",      variant:"danger"  },
   insufficient_data:{ color:"#9CA3AF", label:"Collecting Data", bg:"bg-ink-50      border-ink-200",      variant:"neutral" },
 };
-
-/* ══════════════════════════════════════════════════════
-   SECTION: Live Sensor Strip
-   Source: GET /api/sensors/latest
-   Firebase RTDB onValue for real-time moisture + motor
-══════════════════════════════════════════════════════ */
-function LiveSensorStrip({ latest, rtdbLive, irrigStats, loading }) {
-  const moisture   = rtdbLive?.moisture   ?? latest?.soilMoisture?.value  ?? null;
-  const motorOn    = (rtdbLive?.motor     ?? latest?.motorStatus) === "ON";
-  const rain       = rtdbLive?.rain       ?? latest?.precipitation        ?? 0;
-  const temp       = latest?.temperature  ?? null;
-  const humidity   = latest?.humidity     ?? null;
-  const lastUpdate = rtdbLive?.lastUpdated
-    ? formatDistanceToNow(new Date(rtdbLive.lastUpdated), { addSuffix: true })
-    : latest?.timestamp
-      ? formatDistanceToNow(new Date(latest.timestamp), { addSuffix: true })
-      : null;
-
-  const mColor = moisture == null ? "#9CA3AF"
-    : moisture < 20 ? "#EF4444"
-    : moisture < 40 ? "#F59E0B"
-    : "#10B981";
-
-  const chips = [
-    {
-      icon: Droplets,   label: "Soil Moisture",
-      value: moisture != null ? `${moisture.toFixed(1)}%` : "—",
-      sub: moisture != null ? (moisture < 20 ? "Critical" : moisture < 40 ? "Low" : moisture < 70 ? "Optimal" : "High") : "No data",
-      color: mColor, bg: `${mColor}12`,
-    },
-    {
-      icon: Power,      label: "Motor",
-      value: motorOn ? "Running" : "Idle",
-      sub: motorOn ? `${irrigStats?.today?.totalDuration ?? 0} min today` : "Off",
-      color: motorOn ? "#10B981" : "#9CA3AF",
-      bg: motorOn ? "#10B98112" : "#9CA3AF12",
-      dot: motorOn,
-    },
-    {
-      icon: Thermometer,label: "Temperature",
-      value: temp != null ? `${Math.round(temp)}°C` : "—",
-      sub: temp != null ? (temp > 38 ? "Very hot" : temp > 32 ? "Hot" : "Normal") : "No data",
-      color: "#F59E0B", bg: "#F59E0B12",
-    },
-    {
-      icon: Zap,        label: "Rain Chance",
-      value: `${Math.round(rain)}%`,
-      sub: rain > 70 ? "Skip irrigation" : rain > 40 ? "Likely rain" : "Clear",
-      color: rain > 60 ? "#3B82F6" : "#0D9488", bg: rain > 60 ? "#3B82F612" : "#0D948812",
-    },
-    {
-      icon: Droplets,   label: "Humidity",
-      value: humidity != null ? `${Math.round(humidity)}%` : "—",
-      sub: "Ambient field",
-      color: "#6366F1", bg: "#6366F112",
-    },
-    {
-      icon: BarChart3,  label: "Water Today",
-      value: `${Math.round(irrigStats?.today?.totalWater ?? 0)} L`,
-      sub: `${irrigStats?.today?.count ?? 0} events`,
-      color: "#7C3AED", bg: "#7C3AED12",
-    },
-  ];
-
-  return (
-    <div className="space-y-3">
-      {/* Header row */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            {rtdbLive ? (
-              <><LiveDot color="green" /><span className="text-xs font-bold text-primary-600">Live · Firebase RTDB</span></>
-            ) : (
-              <><WifiOff size={11} className="text-ink-400" /><span className="text-xs text-ink-400">Cached data</span></>
-            )}
-          </div>
-          {lastUpdate && <span className="text-xs text-ink-400">· updated {lastUpdate}</span>}
-        </div>
-        <Badge variant={latest?.source === "realtime" ? "success" : "neutral"}>
-          {latest?.source === "realtime" ? "Real-time" : latest?.source === "influxdb" ? "InfluxDB" : "Cached"}
-        </Badge>
-      </div>
-
-      {/* Chips grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-        {chips.map(({ icon: Icon, label, value, sub, color, bg, dot }) => (
-          <div key={label}
-            className="flex flex-col gap-1.5 p-3 rounded-2xl border border-primary-50 bg-white transition-all hover:shadow-card-hover">
-            <div className="flex items-center gap-1.5">
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: bg }}>
-                <Icon size={12} style={{ color }} strokeWidth={2} />
-              </div>
-              {dot && <LiveDot size={6} color="green" />}
-              <p className="text-[0.6rem] font-bold text-ink-400 uppercase tracking-wide truncate">{label}</p>
-            </div>
-            <p className="font-mono font-black text-base text-ink-800 leading-none" style={{ color }}>
-              {loading ? "—" : value}
-            </p>
-            <p className="text-[0.6rem] text-ink-400 truncate">{sub}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════
-   SECTION: Sensor History Sparklines
-   Source: GET /api/sensors/history (InfluxDB/MongoDB)
-══════════════════════════════════════════════════════ */
-function SensorHistoryPanel({ farmId }) {
-  const [data,   setData]   = useState([]);
-  const [period, setPeriod] = useState("24h");
-  const [loading,setLoad]   = useState(true);
-
-  useEffect(() => {
-    setLoad(true);
-    sensorAPI.history({ period })
-      .then(r => {
-        const readings = r.data.data?.readings || [];
-        setData(readings.map(x => ({
-          t:        format(new Date(x.timestamp), period === "24h" ? "HH:mm" : "dd/MM"),
-          moisture: x.soilMoisture?.value ?? null,
-          temp:     x.temperature?.value  ?? null,
-          humidity: x.humidity?.value     ?? null,
-          nitrogen: x.nitrogen?.value     ?? null,
-        })).filter(x => x.moisture != null));
-      })
-      .catch(() => setData([]))
-      .finally(() => setLoad(false));
-  }, [period, farmId]);
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (!active || !payload?.length) return null;
-    const d = payload[0]?.payload;
-    return (
-      <div className="bg-white rounded-xl shadow-card border border-primary-100 p-2.5 text-xs min-w-[130px]">
-        <p className="font-bold text-ink-700 mb-1.5">{d.t}</p>
-        {payload.map(p => (
-          <div key={p.dataKey} className="flex justify-between gap-3">
-            <span style={{ color: p.color }} className="font-medium">{p.name}</span>
-            <span className="font-black text-ink-800">{p.value?.toFixed(1)}{p.unit}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const periods = ["1h","24h","7d","30d"];
-
-  return (
-    <Card className="overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-primary-50 flex items-center justify-between flex-wrap gap-2"
-        style={{ background:"#F7FBF9" }}>
-        <SectionHeader title="Sensor History" subtitle="InfluxDB time-series · aggregated" />
-        <div className="flex gap-1">
-          {periods.map(p => (
-            <button key={p} onClick={() => setPeriod(p)}
-              className={clsx(
-                "px-2.5 py-1 rounded-lg text-xs font-bold transition-all",
-                period === p ? "bg-primary-500 text-white" : "text-ink-500 hover:bg-primary-50"
-              )}>
-              {p}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="p-5">
-        {loading
-          ? <Skeleton className="h-40 rounded-xl" />
-          : data.length === 0
-            ? (
-              <div className="h-40 flex flex-col items-center justify-center gap-2 text-ink-400">
-                <BarChart3 size={24} strokeWidth={1.2} className="opacity-40" />
-                <p className="text-xs">No sensor readings for this period</p>
-              </div>
-            )
-            : (
-              <ResponsiveContainer width="100%" height={180}>
-                <AreaChart data={data} margin={{ left: -18, right: 4 }}>
-                  <defs>
-                    <linearGradient id="sGradM" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#10B981" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="sGradT" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#F59E0B" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
-                  <XAxis dataKey="t" tick={AX} tickLine={false} axisLine={false}
-                    interval={Math.max(0, Math.floor(data.length / 6))} />
-                  <YAxis tick={AX} tickLine={false} axisLine={false} tickFormatter={v => v + "%"} domain={[0,100]} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="moisture" name="Moisture" unit="%"
-                    stroke="#10B981" strokeWidth={2} fill="url(#sGradM)" dot={false}
-                    activeDot={{ r:4, fill:"#10B981", stroke:"white", strokeWidth:2 }} />
-                  {data.some(d => d.temp != null) && (
-                    <Area type="monotone" dataKey="temp" name="Temp" unit="°C"
-                      stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="4 2"
-                      fill="url(#sGradT)" dot={false} yAxisId={0} />
-                  )}
-                </AreaChart>
-              </ResponsiveContainer>
-            )
-        }
-      </div>
-    </Card>
-  );
-}
 
 /* ══════════════════════════════════════════════════════
    SECTION: Risk Banner
@@ -664,6 +453,16 @@ function WhatIfPanel({ ctx, onSimulate, simMode, onClearSim }) {
 function ModelParams({ twin }) {
   if (!twin) return null;
   const { simulation: sim } = twin;
+
+  // Helper to safely display values
+  const safeValue = (v) => {
+    if (v == null) return "—";
+    if (typeof v === "object") {
+      return v.cropType || v.name || v.type || "—";
+    }
+    return v;
+  };
+
   const rows = [
     { l:"Crop Coefficient (Kc)", v:sim.kc,                       unit:"" },
     { l:"ET₀ Today",             v:sim.et0Day?.toFixed(1),        unit:"mm/day" },
@@ -675,25 +474,17 @@ function ModelParams({ twin }) {
     { l:"Season Day",            v:twin.daysSinceSowing,          unit:"" },
   ];
 
-  function safeValue(v) {
-  if (v == null) return "—";
-  if (typeof v === "object") {
-    // choose meaningful field
-    return v.cropType || v.name || v.type || "—";
-  }
-  return v;
-}
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
       {rows.map(({ l, v, unit }) => (
         <div key={l} className="p-3 rounded-xl bg-surface-2 border border-primary-50">
           <p className="text-[0.6rem] font-bold text-ink-400 uppercase tracking-wide truncate">{l}</p>
           <p className="font-black text-sm text-ink-800 mt-0.5">
-  {safeValue(v)}
-  {unit && v != null && typeof v !== "object" && (
-    <span className="text-xs font-medium text-ink-400"> {unit}</span>
-  )}
-</p>
+            {safeValue(v)}
+            {unit && v != null && typeof v !== "object" && (
+              <span className="text-xs font-medium text-ink-400"> {unit}</span>
+            )}
+          </p>
         </div>
       ))}
     </div>
@@ -773,21 +564,47 @@ export default function AIPage() {
 
   /* ── Firebase RTDB real-time listener ──────────────── */
   useEffect(() => {
-    if (!farmId || farmId === "0") return;
-    const r = ref(rtdb, `irrigation_control/${farmId}`);
+    
+    const r = ref(rtdb, `smartirrrigation`);
+
     onValue(r, snap => {
-      const d = snap.val();
-      if (d) setRtdb({
-        moisture:    parseFloat(d.SensorReading) || 0,
-        motor:       d.switch       || "OFF",
-        rain:        d.precipitation || 0,
-        lastUpdated: d.lastUpdated,
-        triggeredBy: d.triggeredBy,
+    const root = snap.val();
+    if (!root) return;
+
+    // 🔥 FIX: access FARMID1 inside root
+    const d = root.FARMID1;
+    if (!d) return;
+
+      // ✅ Normalize nodes (handles Node1, node1, etc.)
+      const nodes = Object.keys(d)
+      .filter(k => k.startsWith("node"))
+      .map(k => ({
+        node_id: d[k].node_id || k,
+        sensor_moisture: parseFloat(d[k].sensor_moisture) || 0,
+        valve_id: d[k].valve_id,
+        valve_switch: d[k].valve_switch1 || "OFF", // 🔥 correct key
+      }));
+
+    // ✅ Average moisture
+    const avgMoisture =
+      nodes.length > 0
+        ? nodes.reduce((sum, n) => sum + n.sensor_moisture, 0) / nodes.length
+        : 0;
+          
+
+      
+
+      setRtdb({
+        moisture: Number(avgMoisture.toFixed(1)),
+        pump: d.pump || "OFF",
+        nodes,
+        lastUpdated: d.timestamp || new Date().toISOString(),
+        rain:0,
       });
     });
+
     return () => off(r);
   }, [farmId]);
-
   /* ── Fetch sensor latest ───────────────────────────── */
   const fetchSensorLatest = useCallback(async () => {
     try {
@@ -818,57 +635,10 @@ export default function AIPage() {
       setLastRef(new Date());
     } catch (e) {
       setTwinErr(e.message || "AI engine unavailable");
-      // Graceful fallback — generate mock data so UI is still useful
-      injectMockTwin();
+      // Don't inject mock data — let the UI show the error state
+      console.error("AI Twin fetch failed:", e);
     } finally { setTwinL(false); }
   }, [activeFarm]);
-
-  const injectMockTwin = () => {
-    const steps = Array.from({ length: 12 }, (_, i) => {
-      const h = (i + 1) * 6;
-      const m = Math.max(12, 52 - i * 2.4 + (Math.random() - 0.5) * 3);
-      return {
-        hoursFromNow: h, moisture: parseFloat(m.toFixed(1)),
-        et: parseFloat((0.28 + Math.random() * 0.18).toFixed(2)),
-        drained: 0, rainGain: h > 36 ? parseFloat((Math.random() * 2.5).toFixed(1)) : 0,
-        label: h <= 24 ? `${h}h` : `${Math.round(h / 24)}d`,
-        risk: m < 20 ? "critical" : m < 38 ? "warning" : "optimal",
-        wiltingPoint: 14, fieldCapacity: 35,
-      };
-    });
-    setTwin({
-      simulation: {
-        current: 52, steps, kc: 0.92, et0Day: 5.1,
-        soilProps: { fieldCapacity: 35, wiltingPoint: 14, drainageRate: 0.08, type: activeFarm?.soilType || "Loamy" },
-        threshold: 40,
-      },
-      irrigationRecommendation: {
-        urgency: "soon",
-        actBy: new Date(Date.now() + 18 * 3600000).toISOString(),
-        message: "Schedule irrigation in ~18 hours based on projected ET₀ and no rain forecast.",
-        reason: "Demo data — connect backend for live predictions",
-      },
-      stressDetection: {
-        overallRisk: "warning", confidence: 58, topStressType: "heat_stress",
-        summary: "Demo mode — possible heat stress signature detected. Connect backend for real analysis.",
-        detectedAt: new Date().toISOString(),
-        currentConditions: { avgMoisture: 52, avgTemp: 34, readingsUsed: 0 },
-        stresses: [
-          {
-            type: "heat_stress", label: "Heat Stress", severity: "medium", confidence: 58,
-            description: "Sustained high temperature combined with moisture decline indicates transpiration stress.",
-            recommendation: "Increase irrigation frequency. Consider early-morning watering to reduce evaporation.",
-            triggeredSignals: ["High temp", "Rapid moisture drop"],
-          },
-        ],
-      },
-      generatedAt: new Date().toISOString(),
-      cropType: activeFarm?.activeCrop || "Wheat",
-      daysSinceSowing: 35,
-    });
-    setCtx({ currentMoisture: 52, cropType: "Wheat", daysSinceSowing: 35, stageThreshold: 40 });
-    setFarmInfo({ name: activeFarm?.name || "Demo Farm", soilType: activeFarm?.soilType || "Loamy", area: activeFarm?.area || 5 });
-  };
 
   /* ── Initial load + auto-refresh ──────────────────── */
   useEffect(() => {
@@ -897,31 +667,10 @@ export default function AIPage() {
       });
       setSimTwin(data.data.twin);
       setSimMode(true);
-    } catch {
-      // Client-side fallback
-      const steps = Array.from({ length: 12 }, (_, i) => {
-        const h    = (i + 1) * 6;
-        const base = params.currentMoisture + (params.addIrrigationLitres > 0 ? 14 : 0);
-        const m    = Math.max(8, base - i * 2.8 + (params.addIrrigationLitres > 0 && i < 2 ? 10 : 0));
-        return {
-          hoursFromNow: h, moisture: parseFloat(m.toFixed(1)),
-          et: parseFloat((0.28 + params.tempC / 150).toFixed(2)),
-          drained: 0, rainGain: 0,
-          label: h <= 24 ? `${h}h` : `${Math.round(h / 24)}d`,
-          risk: m < 20 ? "critical" : m < 38 ? "warning" : "optimal",
-          wiltingPoint: 14, fieldCapacity: 35,
-        };
-      });
-      setSimTwin({
-        simulation: { current: params.currentMoisture, steps, kc: 0.92, et0Day: 5.0,
-          soilProps: { fieldCapacity: 35, wiltingPoint: 14, drainageRate: 0.08, type: params.soilType },
-          threshold: 40,
-        },
-        irrigationRecommendation: { urgency: "scheduled", message: "Scenario estimated client-side.", reason: "Backend simulation unavailable" },
-        stressDetection: { overallRisk: "none", confidence: 0, stresses: [], summary: "Scenario mode.", detectedAt: new Date().toISOString() },
-        cropType: params.cropType, daysSinceSowing: context?.daysSinceSowing ?? 30,
-      });
-      setSimMode(true);
+    } catch (e) {
+      // Show error to user instead of generating mock data
+      console.error("Simulation failed:", e);
+      alert("Simulation unavailable. Please try again later.");
     }
   };
 
@@ -931,6 +680,16 @@ export default function AIPage() {
   const sim          = displayTwin?.simulation;
   const rec          = displayTwin?.irrigationRecommendation;
   const irrigDecision= irrigStatus?.decision;
+
+  // Extract real data from API responses and RTDB
+  const soilMoisture = rtdbLive?.moisture ?? latest?.moisture ?? 0;
+  const temperature = latest?.temperature ?? 25;
+  const humidity = latest?.humidity ?? 60;
+  const rainProbability = latest?.rainProbability ?? 0;
+  const growthStageIndex = activeFarm?.currentCropStage ?? 0;
+  const irrigationOn = rtdbLive?.motor === "ON" || rtdbLive?.pump === "ON";
+  const cropThreshold = activeFarm?.irrigationThreshold ?? 35;
+  
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -956,13 +715,13 @@ export default function AIPage() {
 
         <div className="flex items-center gap-2 flex-wrap">
           {twinErr && (
-            <span className="text-xs text-amber-600 flex items-center gap-1">
-              <AlertTriangle size={11} /> Demo data
+            <span className="text-xs text-red-600 flex items-center gap-1 bg-red-50 px-2.5 py-1 rounded-lg border border-red-100">
+              <AlertTriangle size={11} /> {twinErr}
             </span>
           )}
           {lastRef && !twinLoad && (
             <span className="text-xs text-ink-400 flex items-center gap-1">
-              <Clock size={10} /> {format(lastRef, "HH:mm")}
+              <Clock size={10} /> Updated {formatDistanceToNow(lastRef, { addSuffix: true })}
             </span>
           )}
           <Button variant="outline" size="sm" loading={twinLoad}
@@ -972,42 +731,22 @@ export default function AIPage() {
         </div>
       </div>
 
-      {/* ── HOW IT WORKS ───────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {[
-          { icon:Activity,    color:"#10B981", title:"Stress Detection",
-            desc:"Analyses 48+ sensor readings across 5 stress signatures — heat, drought, waterlogging, nutrient, and root stress." },
-          { icon:FlaskConical,color:"#0D9488", title:"Soil Digital Twin",
-            desc:"Runs a 72-hour water-balance simulation using Hargreaves-Samani ET₀, FAO-56 Kc coefficients, and soil hydraulics." },
-          { icon:Zap,         color:"#7C3AED", title:"Smart Irrigation",
-            desc:"Outputs the precise irrigation window — not just 'now' but the exact future time based on projected soil moisture dynamics." },
-        ].map(({ icon: Icon, color, title, desc }) => (
-          <div key={title} className="flex items-start gap-3 p-4 rounded-2xl bg-white border border-primary-50">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background:`${color}12` }}>
-              <Icon size={17} style={{ color }} strokeWidth={1.8} />
-            </div>
-            <div>
-              <p className="font-bold text-sm text-ink-800">{title}</p>
-              <p className="text-xs text-ink-500 mt-0.5 leading-relaxed">{desc}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── LIVE SENSOR STRIP ──────────────────────── */}
-      <Card className="p-5">
-        <LiveSensorStrip
-          latest={latest}
-          rtdbLive={rtdbLive}
-          irrigStats={irrigStats}
-          loading={!latest && !rtdbLive}
-        />
-      </Card>
 
       {/* ── RISK BANNER ────────────────────────────── */}
       {twinLoad
         ? <Skeleton className="h-20 rounded-2xl" />
+        : twinErr ? (
+          <div className="p-4 rounded-2xl border-2 border-red-200 bg-red-50">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={18} className="text-red-600" />
+              <div>
+                <p className="font-bold text-red-800 text-sm">AI Engine Unavailable</p>
+                <p className="text-xs text-red-600 mt-1">{twinErr}</p>
+                <p className="text-xs text-red-500 mt-2">Please check the backend connection and try refreshing.</p>
+              </div>
+            </div>
+          </div>
+        )
         : stress && (
           <RiskBanner
             risk={stress.overallRisk}
@@ -1144,8 +883,8 @@ export default function AIPage() {
         <IrrigRecCard rec={rec} irrigDecision={irrigDecision} />
       )}
 
-      {/* ── SENSOR HISTORY (InfluxDB/MongoDB time-series) ── */}
-      <SensorHistoryPanel farmId={farmId} />
+      {/* ── SENSOR HISTORY (InfluxDB/MongoDB time-series) ──
+      <SensorHistoryPanel farmId={farmId} /> */}
 
       {/* ── MODEL PARAMETERS ───────────────────────── */}
       {!twinLoad && twin && (
@@ -1159,7 +898,20 @@ export default function AIPage() {
         </Card>
       )}
 
-      {/* ── WHAT-IF SIMULATOR ──────────────────────── */}
+      {/* ── CROP HEALTH SCORE ──────────────────────– */}
+      {twinLoad && (
+        <CropHealthScore
+          soilMoisture={soilMoisture}
+          temperature={temperature}
+          humidity={humidity}
+          rainProbability={rainProbability}
+          growthStageIndex={growthStageIndex}
+          irrigationOn={irrigationOn}
+          cropThreshold={cropThreshold}
+        />
+      )}
+
+      {/* ── WHAT-IF SIMULATOR ────────────────────────
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4">
           <SectionHeader
@@ -1186,10 +938,10 @@ export default function AIPage() {
             <IrrigRecCard rec={simTwin.irrigationRecommendation} irrigDecision={null} />
           </div>
         )}
-      </Card>
+      </Card> */}
 
       {/* ── SCIENCE NOTE ───────────────────────────── */}
-      <div className="flex items-start gap-3 p-4 rounded-2xl bg-ink-50 border border-ink-100">
+      {/* <div className="flex items-start gap-3 p-4 rounded-2xl bg-ink-50 border border-ink-100">
         <Info size={14} className="text-ink-400 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-ink-500 leading-relaxed">
           The Digital Twin uses the{" "}
@@ -1201,7 +953,7 @@ export default function AIPage() {
           manual trigger. Predictions are indicative — micro-climate variations may
           affect accuracy.
         </p>
-      </div>
+      </div> */}
     </div>
   );
 }

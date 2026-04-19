@@ -12,14 +12,14 @@ const initializeFirebase = () => {
 
     const serviceAccount = {
       type: 'service_account',
-      project_id: process.env.FIREBASE_PROJECT_ID||"smart-irrigation-c643b",
+      project_id: process.env.FIREBASE_PROJECT_ID,
       private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-      client_email: process.env.FIREBASE_CLIENT_EMAIL|| "firebase-adminsdk-fbsvc@smart-irrigation-c643b.iam.gserviceaccount.com",
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
     };
 
     firebaseApp = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      databaseURL: process.env.FIREBASE_DATABASE_URL||"https://smart-irrigation-c643b-default-rtdb.asia-southeast1.firebasedatabase.app",
+      databaseURL: process.env.FIREBASE_DATABASE_URL,
     });
     console.log("privatekey", process.env.FIREBASE_CLIENT_EMAIL);
     logger.info('Firebase Admin initialized');
